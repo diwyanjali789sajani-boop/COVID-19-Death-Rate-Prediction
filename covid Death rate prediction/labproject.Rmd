@@ -1,0 +1,134 @@
+---
+title: "Untitled"
+author: "PS/2021/068"
+date: "2025-06-13"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("caTools")
+#install.packages("car")
+#install.packages("quantmod")
+#install.packages("MASS")
+#install.packages("corrplot")
+#install.packages("leaps")
+#install.packages("Metrics")
+#install.packages("tidyr")
+#install.packages("dplyr")
+```
+```{r}
+library(caTools)
+library(car)
+library(quantmod)
+library(MASS)
+library(corrplot)
+library(Metrics)
+library(tidyr)
+library(dplyr)
+library(leaps)
+```
+
+
+```{r}
+worldometer_data <- read.csv("C:\\Users\\Acer\\Downloads\\worldometer_data.csv")
+View(worldometer_data)
+```
+
+```{r}
+names(worldometer_data)
+```
+```{r}
+str(worldometer_data)
+```
+# We dicided to remove NewCases, NewDeaths, NewRecovered because of they have lot of missing values and there are variables with totals (TotalCases, TotalDeaths ,TotalRecovered),
+# Also we remove ActiveCases, Series.Critical  because of lot of missing values we remove those variables  
+```{r}
+corona <- worldometer_data[,-c(5,7,9,10,11)]
+head(corona)
+```
+```{r}
+sum(is.na(corona))
+```
+```{r}
+df <- na.omit(corona)
+```
+
+
+
+```{r}
+pairs(df[,-c(1,2,11)])
+```
+```{r}
+corona$Continent
+boxplot(corona$TotalDeaths ~ corona$Continent)
+```
+
+```{r}
+boxplot(corona$TotalDeaths~corona$WHO.Region)
+```
+
+# using best subset selection fit regression model to predict total death rate.
+```{r}
+model <- regsubsets(TotalDeaths ~ ., data = corona[,-1])
+summary(model)
+```
+
+```{r}
+ model <- regsubsets(TotalDeaths ~ ., data = corona[,-1], nvmax = 18)
+model.summary <- summary(model)
+model.summary
+```
+
+# Plotting the RSS and adjusted R2 and adding a point where R2 is at its maximum using which.max() function.
+
+```{r}
+par(mfrow = c(1,2))
+plot(model.summary$rss, xlab = "Number of Variables", ylab = "RSS", type = "l")
+RSS.min <- which.min(model.summary$rss)
+points(RSS.min, model.summary$rss[RSS.min], col = "blue", cex = 2, pch = 20)
+abline(v = RSS.min)
+
+plot(model.summary$adjr2, xlab = "Number of Variables", ylab = "Adjusted rsq^2", type = "l")
+adjr2.max <- which.max(model.summary$adjr2)
+points(adjr2.max, model.summary$adjr2[adjr2.max], col = "red", cex = 2, pch = 20)
+abline(v = adjr2.max)
+```
+
+# Plotting the the (Cp) statistic and BIC and identify the minimum points for each statistic using the which.min() function.
+```{r}
+par(mfrow = c(1,2))
+plot(model.summary$cp, xlab = "Number of variables", ylab = "Cp", type = "l")
+Cp.min <- which.min(model.summary$cp)
+points(Cp.min, model.summary$cp[Cp.min], col = "red", cex = 2, pch = 20)
+
+plot(model.summary$bic, xlab = "Number of variables", ylab = "BIC", type = "l")
+BIC.min <- which.min(model.summary$bic)
+points(BIC.min, model.summary$bic[BIC.min], col = "blue", cex = 2, pch = 20)
+```
+```{r}
+data.frame(
+           Cp = model.summary$cp,
+           adjr2 = model.summary$adjr2,
+           BIC = model.summary$bic,
+           RSS = model.summary$rss)
+```
+
+```{r}
+coef(model, RSS.min)
+```
+```{r}
+coef(model, adjr2.max)
+```
+```{r}
+coef(model, Cp.min)
+```
+```{r}
+coef(model, BIC.min)
+```
+
+
+
